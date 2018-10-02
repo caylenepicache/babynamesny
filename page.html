@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="the-data-format.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.bundle.js"></script>
+        
+        <style>
+            #section {
+                display: flex;
+            }
+            #input-filters {
+                flex: 0 0 30%;
+            }
+            #display-graph {
+                flex: 1;
+            }
+        </style>
+    </head>
+    
+    <body>
+        
+        <div id='section'>
+            <div id='input-filters'> </div>
+            <div id='display-graph'>
+                <canvas id="myChart" width="400" height="400"></canvas>
+            </div>
+        </div>
+        
+        <div id='display-footer'></div>
+
+        <!-- ================================================================================ -->
+
+        <script>
+            var THE_FILTERS = {};
+            
+            doMain();
+
+            function doMain() {
+                // get the data via REST get
+                console.log(theData);
+
+                var filterInfo = getFiltersFromData(theData.meta);
+                THE_FILTERS = filterInfo;
+                updateHtmlGraph();
+                updateHtmlFooter();
+                updateHtmlFilter(filterInfo);
+            }
+
+            function getFiltersFromData(metaData) {
+                var columns = metaData.view.columns;
+                var querys = metaData.view.query.orderBys;
+
+                var columnIds = [];
+                for (var i in querys) {
+                    var query = querys[i];
+                    columnIds.push(query.expression.columnId);
+                }
+                
+                var results = {};
+                for (var i in columnIds) {
+                    var columnId = columnIds[i];
+                    var column = getColumn(columnId, columns);
+
+                    if (column) {
+                        var topData = column.cachedContents.top;
+                        var idx = columns.indexOf(column);
+                        topData['dataIndex'] = idx;
+                        topData['selected'] = "All";
+                        results[column.name] = topData;
+                    }
+                }
+
+                return results;
+            }
+            
+            function doFilter(filterCriteria) {
+                var results = {"dataForGraph": "dataForGraph"};
+                return results;
+            }
+
+            // -- update html functions
+
+            function updateHtmlFilter(filterInfo) {
+                var $filterDiv = $('#input-filters');
+                
+                for (var i in filterInfo) {
+                    var filterName = i;
+                    var filterData = filterInfo[i];
+                    var dataIndex = filterData['dataIndex'];
+
+                    var html = "<br/><b>" + filterName + "</b><br/>";
+                    html += "<input type='radio' name='" + filterName + "' checked=checked data-filter-name='"+filterName+"' data-index='"+dataIndex+"' data-value='All' onchange='handleHtmlRadioCheck(this)' /> All<br/>";
+                    for (var j in filterData) {
+                        if (j === "dataIndex") {
+                            continue;
+                        }
+                        
+                        if (j === "selected") {
+                            continue;
+                        }
+                    
+                        filter = filterData[j];
+                        html += "<input type='radio' name='" + filterName + "' data-filter-name='"+filterName+"' data-index='"+dataIndex+"' data-value='"+filter.item+"' onchange='handleHtmlRadioCheck(this)' /> "+filter.item+"<br/>";
+                    }
+                    
+                    $filterDiv.append(html);
+                }
+            }
+            
+            function updateHtmlFooter (filterCriteria) {
+                var $filterDiv = $('#display-footer');
+                
+                var html = "";
+                
+                for (var i in THE_FILTERS) {
+                    var filter = THE_FILTERS[i];
+                    var name = i;
+                    var value = filter.selected;
+                    
+                    html += "<b>"+name+"</b>: "+value+"<br/><br/>";
+                }
+                
+                $filterDiv.html(html);
+            }
+
+            function updateHtmlGraph() {
+                
+                
+                
+var ctx = document.getElementById("myChart").getContext('2d');
+var myChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
+        datasets: [{
+            label: '# of Votes',
+            data: [12, 19, 3, 5, 2, 3],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)',
+                'rgba(255, 159, 64, 0.2)'
+            ],
+            borderColor: [
+                'rgba(255,99,132,1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero:true
+                }
+            }]
+        }
+    }
+});
+            }
+
+            // -- html input functions
+            
+            function handleHtmlRadioCheck(radioElm) {
+                var filterName = $(radioElm).data("filter-name");
+                var index = $(radioElm).data("index");
+                var value = $(radioElm).data("value");
+                
+                THE_FILTERS[filterName].selected = value;
+                
+                updateHtmlGraph();
+                updateHtmlFooter();
+            }
+            
+            // -- helpers
+            
+            function getColumn(columnId, columns) {
+                for (var i in columns) {
+                    var column = columns[i];
+                    if (!column.id || column.id < 0) {
+                        continue;
+                    }
+                    
+                    if (columnId === column.id) {
+                        return column;
+                    }
+                }
+                
+                return undefined;
+            }
+        </script>
+    </body>
+</html>
